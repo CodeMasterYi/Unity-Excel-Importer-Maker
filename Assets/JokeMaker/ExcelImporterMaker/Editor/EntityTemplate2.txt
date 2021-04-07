@@ -1,14 +1,15 @@
-﻿using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class $ExcelData$ : ScriptableObject
-{	
-	public List<Param> param = new List<Param> ();
+{
+    public List<Param> param = new List<Param> ();
 
-	[System.SerializableAttribute]
-	public class Param
-	{
-		$Types$
-	}
+    [Serializable]
+    public class Param
+    {
+        $Types$
+    }
 }
