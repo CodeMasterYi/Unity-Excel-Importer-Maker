@@ -8,3 +8,9 @@
 *.sln
 Logs
 .idea
+JetBrains.Rider.Unity.Editor.Plugin.Repacked.dll
+JetBrains.Rider.Unity.Editor.Plugin.Repacked.dll.meta
+Assets/Plugins
+Assets/ExcelData
+Assets/ExcelData.meta
+Assets/Plugins.meta
