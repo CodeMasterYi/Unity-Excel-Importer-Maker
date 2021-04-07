@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class $ExcelData$ : ScriptableObject
 {
-    public List<Sheet> sheets = new List<Sheet> ();
+    public List<Sheet> sheets = new List<Sheet>();
 
     [Serializable]
     public class Sheet

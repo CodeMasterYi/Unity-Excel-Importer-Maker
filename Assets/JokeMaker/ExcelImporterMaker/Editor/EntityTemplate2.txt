@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class $ExcelData$ : ScriptableObject
 {
-    public List<Param> param = new List<Param> ();
+    public List<Param> param = new List<Param>();
 
     [Serializable]
     public class Param
