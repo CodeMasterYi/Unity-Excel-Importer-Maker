@@ -10,6 +10,6 @@ public class $ExcelData$ : ScriptableObject
     [Serializable]
     public class Param
     {
-        $Types$
+        $Fields$
     }
 }
