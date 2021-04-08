@@ -1,0 +1,107 @@
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+using NPOI.HSSF.UserModel;
+using NPOI.XSSF.UserModel;
+using NPOI.SS.UserModel;
+using $EntityNamespace$;
+
+namespace $Namespace$
+{
+    public class ExcelImporter_$ExcelName$ : AssetPostprocessor
+    {
+        private const string filePath = "$IMPORT_PATH$";
+        private const string exportFolder = "$EXPORT_FOLDER$";
+        
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
+        {
+            foreach (string asset in importedAssets)
+            {
+                if (!filePath.Equals(asset)) continue;
+
+                using(FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    IWorkbook book = null;
+                    if (Path.GetExtension (filePath) == ".xls")
+                    {
+                        book = new HSSFWorkbook(stream);
+                    }
+                    else
+                    {
+                        book = new XSSFWorkbook(stream);
+                    }$ExportFunctionCalls$
+                }
+            }
+        }$ExportFunctions$
+    }
+}
+
+##ExportFunction1
+private static void ExportEntity$MainSheetName$(IWorkbook book)
+{
+    var sheetName = "$MainSheetName$";
+    var fileName = Path.GetFileNameWithoutExtension(filePath);
+    var exportPath = $"{exportFolder}/{fileName}_{sheetName}.asset";
+
+    var dataAsset = (Entity$MainSheetName$)AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
+    if (dataAsset == null)
+    {
+        dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();
+        dataAsset.hideFlags = HideFlags.NotEditable;
+        AssetDatabase.CreateAsset(dataAsset, exportPath);
+    }
+    dataAsset.DataList.Clear();
+
+    var sheet = book.GetSheet(sheetName);
+    if (sheet == null)
+    {
+        Debug.LogError($"[{fileName}] sheet not found: {sheetName}!");
+        return;
+    }
+
+    for (var i = 2; i <= sheet.LastRowNum; i++)
+    {
+        var row = sheet.GetRow(i);
+        var p = new Entity$MainSheetName$.Data();
+        ICell cell = null;$EXPORT_DATA$
+        dataAsset.DataList.Add(p);
+    }
+
+    EditorUtility.SetDirty(dataAsset);
+}
+##
+
+##ExportFunction2
+private static void ExportEntity$MainSheetName$(IWorkbook book, string subSheetName)
+{
+    var sheetName = $"$MainSheetName$_{subSheetName}";
+    var fileName = Path.GetFileNameWithoutExtension(filePath);
+    var exportPath = $"{exportFolder}/{fileName}_{sheetName}.asset";
+
+    var dataAsset = (Entity$MainSheetName$)AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
+    if (dataAsset == null)
+    {
+        dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();
+        dataAsset.hideFlags = HideFlags.NotEditable;
+        AssetDatabase.CreateAsset(dataAsset, exportPath);
+    }
+    dataAsset.DataList.Clear();
+
+    var sheet = book.GetSheet(sheetName);
+    if (sheet == null)
+    {
+        Debug.LogError($"[{fileName}] sheet not found: {sheetName}!");
+        return;
+    }
+
+    for (var i = 2; i <= sheet.LastRowNum; i++)
+    {
+        var row = sheet.GetRow(i);
+        var p = new Entity$MainSheetName$.Data();
+        ICell cell = null;$EXPORT_DATA$
+        dataAsset.DataList.Add(p);
+    }
+
+    EditorUtility.SetDirty(dataAsset);
+}
+##

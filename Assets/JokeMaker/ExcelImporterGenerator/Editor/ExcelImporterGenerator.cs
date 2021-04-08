@@ -95,7 +95,7 @@ namespace JokeMaker.Editor
             foreach (var sheet in sheetList)
             {
                 var sheetName = sheet.Name;
-                if (!string.IsNullOrEmpty(sheet.SubName)) sheetName += $"-{sheet.SubName}";
+                if (!string.IsNullOrEmpty(sheet.SubName)) sheetName += $"_{sheet.SubName}";
                 EditorGUI.BeginDisabledGroup(true);
                 EditorGUILayout.ToggleLeft(sheetName, sheet.Enabled);
                 EditorGUI.EndDisabledGroup();
@@ -175,57 +175,8 @@ namespace JokeMaker.Editor
                 {
                     ExportEntity(sheetGroup);
                 }
+                ExportImporter(groupList);
             }
-
-//        GUILayout.Label("Making Importer", EditorStyles.boldLabel);
-//        className = EditorGUILayout.TextField("Class Name", className);
-//
-//        EditorGUILayout.LabelField("Sheet Settings");
-//        EditorGUILayout.BeginVertical("box");
-//        foreach (var sheet in sheetList)
-//        {
-//            EditorGUI.BeginDisabledGroup(true);
-//            EditorGUILayout.ToggleLeft(sheet.Name.TrimStart('_'), sheet.Enabled);
-//            EditorGUI.EndDisabledGroup();
-//        }
-//        EditorGUILayout.EndVertical();
-//
-//        EditorGUILayout.LabelField("Field Settings");
-//        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-//        EditorGUILayout.BeginVertical("box");
-//        var lastCellName = string.Empty;
-//        foreach (var cell in typeList)
-//        {
-//            if (cell.IsArray && lastCellName != null && cell.Name.Equals(lastCellName))
-//            {
-//                continue;
-//            }
-//
-//            GUILayout.BeginHorizontal();
-//            var cellLabelName = cell.Name;
-//            if (cell.IsArray)
-//            {
-//                cellLabelName += " [Array]";
-//            }
-//
-//            cell.Enabled = EditorGUILayout.ToggleLeft(cellLabelName, cell.Enabled);
-//            cell.ValType = (ValueType) EditorGUILayout.EnumPopup(cell.ValType, GUILayout.MaxWidth(100));
-//            GUILayout.EndHorizontal();
-//            lastCellName = cell.Name;
-//        }
-//        EditorGUILayout.EndVertical();
-//        EditorGUILayout.EndScrollView();
-//
-//        if (GUILayout.Button("Generate"))
-//        {
-//            EditorPrefs.SetString($"{editorPrefKeyPrefix}{fileName}.className", className);
-//            ExportEntity();
-//            ExportImporter();
-//
-//            AssetDatabase.ImportAsset(filePath);
-//            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
-//            Close();
-//        }
         }
 
         private enum ValueType
@@ -259,13 +210,13 @@ namespace JokeMaker.Editor
                     var sheet = book.GetSheetAt(i);
                     var sheetInfo = new ExcelSheetInfo();
                     var sheetName = sheet.SheetName.Trim().Replace(" ", "").Replace("\t", "");
-                    var parts = sheetName.Split(new[] {'-'}, StringSplitOptions.RemoveEmptyEntries);
+                    var parts = sheetName.Split(new[] {'_'}, StringSplitOptions.RemoveEmptyEntries);
                     sheetInfo.Name = parts[0];
                     sheetInfo.SubName = parts.Length > 1 ? parts[1] : null;
                     sheetList.Add(sheetInfo);
                     if (!sheetInfo.NameValid || !sheetInfo.SubNameValid)
                     {
-                        Debug.LogError($"Sheet Name is invalid! [{sheetName}]\neg. Name-Sub, Name, _Name-Sub, _Name");
+                        Debug.LogError($"Sheet Name is invalid! [{sheetName}]\neg. Name_Sub, Name, -Name_Sub, -Name");
                     }
 
                     if (!sheetInfo.Enabled) continue;
@@ -274,7 +225,7 @@ namespace JokeMaker.Editor
                     var typeRow = sheet.GetRow(1); // 2nd row [TypeSymbol]
                     for (var j = 0; j < titleRow.LastCellNum; j++)
                     {
-                        var colInfo = new ExcelColumnInfo();
+                        var colInfo = new ExcelColumnInfo {Index = j + 1};
                         var fieldName = titleRow.GetCell(j).StringCellValue;
                         fieldName = fieldName.Trim().Replace(" ", "").Replace("\t", "");
                         colInfo.Name = fieldName;
@@ -335,8 +286,8 @@ namespace JokeMaker.Editor
         private void ExportEntity(ExcelSheetGroup group)
         {
             var entityTemplate = File.ReadAllText(entityTemplateFile);
-            entityTemplate = entityTemplate.Replace("\r\n", "\n");
-            entityTemplate = entityTemplate.TrimEnd('\n') + '\n';
+            var content = entityTemplate.Replace("\r\n", "\n");
+            content = content.TrimEnd('\n') + '\n';
             var fieldBuilder = new StringBuilder();
             fieldBuilder.AppendLine();
             var sheet = group.Sheets[0];
@@ -351,182 +302,105 @@ namespace JokeMaker.Editor
             }
 
             var fieldsStr = fieldBuilder.ToString().Replace("\r\n", "\n").TrimEnd('\n');
-            entityTemplate = entityTemplate.Replace("$Fields$", fieldsStr);
-            entityTemplate = entityTemplate.Replace("$ExcelData$", $"Entity_{group.Name}");
-            entityTemplate = entityTemplate.Replace("$Namespace$", entityNamespace);
+            content = content.Replace("$Fields$", fieldsStr);
+            content = content.Replace("$ExcelData$", $"Entity{group.Name}");
+            content = content.Replace("$Namespace$", entityNamespace);
 
             Directory.CreateDirectory(defaultClassFolder);
-            File.WriteAllText($"{defaultClassFolder}/Entity_{group.Name}.cs", entityTemplate);
+            File.WriteAllText($"{defaultClassFolder}/Entity_{group.Name}.cs", content);
         }
-/*
-        void ExportImporter()
+
+        private const string importerTemplateFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/ImporterTemplate.txt";
+        private void ExportImporter(IList<ExcelSheetGroup> groupList)
         {
-            string templateFilePath = (separateSheet)
-                ? "Assets/JokeMaker/ExcelImporterGenerator/Editor/ExportTemplate2.txt"
-                : "Assets/JokeMaker/ExcelImporterGenerator/Editor/ExportTemplate.txt";
+            var importerTemplate = File.ReadAllText(importerTemplateFile);
+            importerTemplate = importerTemplate.Replace("\r\n", "\n");
+            var match1 = Regex.Match(importerTemplate, @"##ExportFunction1([\s\S]+?)##", RegexOptions.Multiline);
+            var match2 = Regex.Match(importerTemplate, @"##ExportFunction2([\s\S]+?)##", RegexOptions.Multiline);
+            importerTemplate = Regex.Replace(importerTemplate, @"##ExportFunction1[\s\S]+?##", "", RegexOptions.Multiline);
+            importerTemplate = Regex.Replace(importerTemplate, @"##ExportFunction2[\s\S]+?##", "", RegexOptions.Multiline);
+            importerTemplate = importerTemplate.TrimEnd('\n') + '\n';
+            var exportFunction1Template = match1.Groups[1].Value;
+            var exportFunction2Template = match2.Groups[1].Value;
+            
+            var exportFunctionsBuilder = new StringBuilder();
+            exportFunctionsBuilder.AppendLine();
+            var exportFunctionCallsBuilder = new StringBuilder();
+            exportFunctionCallsBuilder.AppendLine();
+            var exportFieldsBuilder = new StringBuilder();
 
-            string importerTemplate = File.ReadAllText(templateFilePath);
-
-            StringBuilder builder = new StringBuilder();
-            StringBuilder sheetListbuilder = new StringBuilder();
-            int rowCount = 0;
-            string indent = "                    ";
-            bool isInbetweenArray = false;
-
-            foreach (ExcelSheetInfo sht in sheetList)
+            foreach (var sheetGroup in groupList)
             {
-                if (sht.Enabled)
+                var functionContent = sheetGroup.MultiParts ? exportFunction2Template : exportFunction1Template;
+                var functionName = $"ExportEntity{sheetGroup.Name}";
+                if (sheetGroup.MultiParts)
                 {
-                    sheetListbuilder.Append("\"" + sht.Name + "\",");
-                }
-            }
-
-            foreach (ExcelColumnInfo row in typeList)
-            {
-                if (row.Enabled)
-                {
-                    if (!row.IsArray)
+                    foreach (var sheet in sheetGroup.Sheets)
                     {
-                        builder.AppendLine();
-                        switch (row.ValType)
-                        {
-                            case ValueType.STRING:
-                                builder.AppendFormat(
-                                    indent +
-                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? string.Empty : cell.StringCellValue);",
-                                    row.Name, rowCount);
-                                break;
-                            case ValueType.BOOL:
-                                builder.AppendFormat(
-                                    indent +
-                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? false : cell.BooleanCellValue);",
-                                    row.Name, rowCount);
-                                break;
-                            case ValueType.INT:
-                                builder.AppendFormat(
-                                    indent +
-                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0 : (int) cell.NumericCellValue);",
-                                    row.Name, rowCount);
-                                break;
-                            case ValueType.LONG:
-                                builder.AppendFormat(
-                                    indent +
-                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0L : (long) cell.NumericCellValue);",
-                                    row.Name, rowCount);
-                                break;
-                            case ValueType.FLOAT:
-                                builder.AppendFormat(
-                                    indent +
-                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0f : (float) cell.NumericCellValue);",
-                                    row.Name, rowCount);
-                                break;
-                            case ValueType.DOUBLE:
-                                builder.AppendFormat(
-                                    indent +
-                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0.0 : cell.NumericCellValue);",
-                                    row.Name, rowCount);
-                                break;
-                        }
+                        exportFunctionCallsBuilder.AppendLine($"{functionName}(book, \"{sheet.SubName}\");");
                     }
-                    else
+                }
+                else
+                {
+                    exportFunctionCallsBuilder.AppendLine($"{functionName}(book);");
+                }
+                exportFieldsBuilder.Clear();
+                exportFieldsBuilder.AppendLine();
+                foreach (var columnInfo in sheetGroup.Sheets[0].ColumnInfos)
+                {
+                    if (!columnInfo.Enabled) continue;
+                    switch (columnInfo.ValType)
                     {
-                        // only the head of array should generate code
-
-                        if (!isInbetweenArray)
-                        {
-                            int arrayLength = 0;
-                            for (ExcelColumnInfo r = row; r != null; r = r.NextArrayItem, ++arrayLength)
-                            {
-                            }
-
-                            builder.AppendLine();
-                            switch (row.ValType)
-                            {
-                                case ValueType.STRING:
-                                    builder.AppendFormat(indent + "p.{0} = new string[{1}];", row.Name, arrayLength);
-                                    break;
-                                case ValueType.BOOL:
-                                    builder.AppendFormat(indent + "p.{0} = new bool[{1}];", row.Name, arrayLength);
-                                    break;
-                                case ValueType.INT:
-                                    builder.AppendFormat(indent + "p.{0} = new int[{1}];", row.Name, arrayLength);
-                                    break;
-                                case ValueType.LONG:
-                                    builder.AppendFormat(indent + "p.{0} = new long[{1}];", row.Name, arrayLength);
-                                    break;
-                                case ValueType.FLOAT:
-                                    builder.AppendFormat(indent + "p.{0} = new float[{1}];", row.Name, arrayLength);
-                                    break;
-                                case ValueType.DOUBLE:
-                                    builder.AppendFormat(indent + "p.{0} = new double[{1}];", row.Name, arrayLength);
-                                    break;
-                            }
-
-                            for (var i = 0; i < arrayLength; ++i)
-                            {
-                                builder.AppendLine();
-                                switch (row.ValType)
-                                {
-                                    case ValueType.STRING:
-                                        builder.AppendFormat(
-                                            indent +
-                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? string.Empty : cell.StringCellValue);",
-                                            row.Name, rowCount + i, i);
-                                        break;
-                                    case ValueType.BOOL:
-                                        builder.AppendFormat(
-                                            indent +
-                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? false : cell.BooleanCellValue);",
-                                            row.Name, rowCount + i, i);
-                                        break;
-                                    case ValueType.INT:
-                                        builder.AppendFormat(
-                                            indent +
-                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0 : (int) cell.NumericCellValue);",
-                                            row.Name, rowCount + i, i);
-                                        break;
-                                    case ValueType.LONG:
-                                        builder.AppendFormat(
-                                            indent +
-                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0L : (long) cell.NumericCellValue);",
-                                            row.Name, rowCount + i, i);
-                                        break;
-                                    case ValueType.FLOAT:
-                                        builder.AppendFormat(
-                                            indent +
-                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0f : (float) cell.NumericCellValue);",
-                                            row.Name, rowCount + i, i);
-                                        break;
-                                    case ValueType.DOUBLE:
-                                        builder.AppendFormat(
-                                            indent +
-                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0.0 : cell.NumericCellValue);",
-                                            row.Name, rowCount + i, i);
-                                        break;
-                                }
-                            }
-                        }
-
-                        isInbetweenArray = (row.NextArrayItem != null);
+                        case ValueType.STRING:
+                            exportFieldsBuilder.AppendLine(
+                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? string.Empty : cell.StringCellValue);");
+                            break;
+                        case ValueType.BOOL:
+                            exportFieldsBuilder.AppendLine(
+                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? false : cell.BooleanCellValue);");
+                            break;
+                        case ValueType.INT:
+                            exportFieldsBuilder.AppendLine(
+                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0 : (int) cell.NumericCellValue);");
+                            break;
+                        case ValueType.LONG:
+                            exportFieldsBuilder.AppendLine(
+                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0L : (long) cell.NumericCellValue);");
+                            break;
+                        case ValueType.FLOAT:
+                            exportFieldsBuilder.AppendLine(
+                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0f : (float) cell.NumericCellValue);");
+                            break;
+                        case ValueType.DOUBLE:
+                            exportFieldsBuilder.AppendLine(
+                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0.0 : cell.NumericCellValue);");
+                            break;
+                        case ValueType.UNKNOWN:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                 }
 
-                rowCount += 1;
+                functionContent = functionContent.Replace("$MainSheetName$", sheetGroup.Name);
+                functionContent = functionContent.Replace("$EXPORT_DATA$", exportFieldsBuilder.ToString());
+                exportFunctionsBuilder.AppendLine(functionContent);
             }
 
-            importerTemplate = importerTemplate.Replace("$IMPORT_PATH$", filePath);
-            importerTemplate = importerTemplate.Replace("$ExportAssetDirectry$", Path.GetDirectoryName(filePath));
-            importerTemplate = importerTemplate.Replace("$EXPORT_PATH$", Path.ChangeExtension(filePath, ".asset"));
-            importerTemplate = importerTemplate.Replace("$ExcelData$", className);
-            importerTemplate = importerTemplate.Replace("$SheetList$", sheetListbuilder.ToString());
-            importerTemplate = importerTemplate.Replace("$EXPORT_DATA$", builder.ToString());
-            importerTemplate = importerTemplate.Replace("$ExportTemplate$", fileName + "_importer");
+            var mainContent = importerTemplate;
+            var filePath = groupList[0].ExcelFilePath;
+            var fileName = Path.GetFileNameWithoutExtension(groupList[0].ExcelFilePath);
+            mainContent = mainContent.Replace("$EntityNamespace$", entityNamespace);
+            mainContent = mainContent.Replace("$Namespace$", importerNamespace);
+            mainContent = mainContent.Replace("$ExcelName$", fileName);
+            mainContent = mainContent.Replace("$IMPORT_PATH$", filePath);
+            mainContent = mainContent.Replace("$EXPORT_FOLDER$", defaultAssetOutputFolder);
+            mainContent = mainContent.Replace("$ExportFunctionCalls$", exportFunctionCallsBuilder.ToString());
+            mainContent = mainContent.Replace("$ExportFunctions$", exportFunctionsBuilder.ToString());
 
-            Directory.CreateDirectory("Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor/");
-            File.WriteAllText("Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor/" + fileName + "_importer.cs",
-                importerTemplate);
+            Directory.CreateDirectory(defaultImporterFolder);
+            File.WriteAllText($"{defaultImporterFolder}/ExcelImporter_{fileName}.cs", mainContent);
         }
-        */
 
         private class ExcelSheetGroup
         {
@@ -575,8 +449,8 @@ namespace JokeMaker.Editor
             public string SubName;
             public readonly List<ExcelColumnInfo> ColumnInfos = new List<ExcelColumnInfo>();
 
-            public bool Enabled => NameValid && SubNameValid && !Name.StartsWith("_");
-            public bool NameValid => Regex.IsMatch(Name, @"^_{0,1}([A-Z][a-z]*?)+?$");
+            public bool Enabled => NameValid && SubNameValid && !Name.StartsWith("-");
+            public bool NameValid => Regex.IsMatch(Name, @"^-{0,1}([A-Z][a-z]*?)+?$");
 
             public bool SubNameValid =>
                 string.IsNullOrEmpty(SubName) || Regex.IsMatch(SubName, @"^([A-Z][a-z]*?)+?[0-9]{0,3}$");
@@ -587,6 +461,7 @@ namespace JokeMaker.Editor
             public string Name;
             public ValueType ValType;
             public bool IsArray;
+            public int Index;
 
             public bool Enabled => Valid && !Name.StartsWith("*");
             public bool Valid => ValType != ValueType.UNKNOWN && Regex.IsMatch(Name, @"^([A-Z][a-z]*?)+?[0-9]{0,1}$");

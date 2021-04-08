@@ -8,7 +8,7 @@ namespace $Namespace$
     {
         public string ExcelName;
         public string SheetName;
-        public List<Data> param = new List<Data>();
+        public List<Data> DataList = new List<Data>();
 
         [Serializable]
         public class Data
