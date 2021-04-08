@@ -22,8 +22,8 @@ public class ExcelImporterGenerator : EditorWindow
     private void OnGUI()
     {
         // Excel List
-        EditorGUILayout.BeginVertical();
         EditorGUILayout.LabelField($"Excel List[{excels.Count}]");
+        EditorGUILayout.BeginVertical("box");
         if (GUILayout.Button("+"))
         {
             excels.Add(null);
@@ -52,10 +52,13 @@ public class ExcelImporterGenerator : EditorWindow
                 {
                     excels.RemoveAt(i);
                     if (excelIndex == i) excelIndex = -1;
+                    break;
                 }
 
                 if (excelIndex == i && excels[i] == null) excelIndex = -1;
+                EditorGUI.BeginDisabledGroup(excels[i] == null);
                 var toggleOn = GUILayout.Toggle(excelIndex == i, string.Empty, GUILayout.MaxWidth(25));
+                EditorGUI.EndDisabledGroup();
                 if (excels[i] != null) excelIndex = toggleOn ? i : -1;
                 EditorGUILayout.EndHorizontal();
             }
@@ -63,45 +66,28 @@ public class ExcelImporterGenerator : EditorWindow
         }
         EditorGUILayout.EndVertical();
 
+        // Chosen Sheet's Info List
         if (excelIndex < 0 || excelIndex >= excels.Count) return;
-        var sheetList = new List<ExcelSheetInfo>();
         var obj = excels[excelIndex];
         var filePath = AssetDatabase.GetAssetPath(obj);
+        var sheetList = GetSheetInfoList(filePath);
 
-        using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        EditorGUILayout.LabelField("Sheet Settings");
+        EditorGUILayout.BeginVertical("box");
+        foreach (var sheet in sheetList)
         {
-            var ext = Path.GetExtension(filePath);
-            var book = ext == ".xls" ? (IWorkbook) new HSSFWorkbook(stream) : new XSSFWorkbook(stream);
-
-            for (var i = 0; i < book.NumberOfSheets; ++i)
-            {
-                var sheet = book.GetSheetAt(i);
-                var sheetInfo = new ExcelSheetInfo();
-                var sheetName = sheet.SheetName.Trim().Replace(" ", "").Replace("\t", "");
-                var parts = sheetName.Split(new[] {'-'}, StringSplitOptions.RemoveEmptyEntries);
-                sheetInfo.Name = parts[0];
-                sheetInfo.SubName = parts.Length > 1 ? parts[1] : null;
-                sheetList.Add(sheetInfo);
-                if (!sheetInfo.NameValid || !sheetInfo.SubNameValid)
-                {
-                    Debug.LogError($"Sheet Name is invalid! [{sheetName}]\neg. Name-Sub, Name, _Name-Sub, _Name");
-                }
-                if (!sheetInfo.Enabled) continue;
-
-                var titleRow = sheet.GetRow(0); // 1st row [FieldName]
-                var typeRow = sheet.GetRow(1); // 2nd row [TypeSymbol]
-                for (var j = 0; j < titleRow.LastCellNum; i++)
-                {
-                    var colInfo = new ExcelColumnInfo();
-                    var fieldName = titleRow.GetCell(j).StringCellValue;
-                    fieldName = fieldName.Trim().Replace(" ", "").Replace("\t", "");
-                    colInfo.Name = fieldName;
-                    var typeStr = typeRow.GetCell(j).StringCellValue;
-                    (colInfo.ValType, colInfo.IsArray) = ParseValueType(typeStr);
-                    sheetInfo.ColumnInfos.Add(colInfo);
-                }
-            }
+            var sheetName = sheet.Name;
+            if (!string.IsNullOrEmpty(sheet.SubName)) sheetName += $"-{sheet.SubName}";
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.ToggleLeft(sheetName, sheet.Enabled);
+            EditorGUI.EndDisabledGroup();
         }
+        EditorGUILayout.EndVertical();
+
+        // Sheet Group
+        if (sheetList.Count == 0) return;
+        var groupList = GetSheetGroupList(filePath, sheetList);
+
 //        GUILayout.Label("Making Importer", EditorStyles.boldLabel);
 //        className = EditorGUILayout.TextField("Class Name", className);
 //
@@ -164,23 +150,6 @@ public class ExcelImporterGenerator : EditorWindow
         UNKNOWN
     }
 
-    private static (ValueType, bool) ParseValueType(string typeStr)
-    {
-        var isArray = false;
-        if (typeStr.EndsWith("[]"))
-        {
-            isArray = true;
-            typeStr = typeStr.Substring(0, typeStr.Length - 2);
-        }
-
-        if (!Enum.TryParse(typeStr, out ValueType valType))
-        {
-            valType = ValueType.UNKNOWN;
-        }
-
-        return (valType, isArray);
-    }
-
     [MenuItem("Window/XLS Import Settings...")]
     private static void ExportExcelToAssetX()
     {
@@ -196,6 +165,84 @@ public class ExcelImporterGenerator : EditorWindow
         {
             
         }
+    }
+
+    private IList<ExcelSheetInfo> GetSheetInfoList(string filePath)
+    {
+        var sheetList = new List<ExcelSheetInfo>();
+        using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            var ext = Path.GetExtension(filePath);
+            var book = ext == ".xls" ? (IWorkbook) new HSSFWorkbook(stream) : new XSSFWorkbook(stream);
+
+            for (var i = 0; i < book.NumberOfSheets; ++i)
+            {
+                var sheet = book.GetSheetAt(i);
+                var sheetInfo = new ExcelSheetInfo();
+                var sheetName = sheet.SheetName.Trim().Replace(" ", "").Replace("\t", "");
+                var parts = sheetName.Split(new[] {'-'}, StringSplitOptions.RemoveEmptyEntries);
+                sheetInfo.Name = parts[0];
+                sheetInfo.SubName = parts.Length > 1 ? parts[1] : null;
+                sheetList.Add(sheetInfo);
+                if (!sheetInfo.NameValid || !sheetInfo.SubNameValid)
+                {
+                    Debug.LogError($"Sheet Name is invalid! [{sheetName}]\neg. Name-Sub, Name, _Name-Sub, _Name");
+                }
+                if (!sheetInfo.Enabled) continue;
+
+                var titleRow = sheet.GetRow(0); // 1st row [FieldName]
+                var typeRow = sheet.GetRow(1); // 2nd row [TypeSymbol]
+                for (var j = 0; j < titleRow.LastCellNum; j++)
+                {
+                    var colInfo = new ExcelColumnInfo();
+                    var fieldName = titleRow.GetCell(j).StringCellValue;
+                    fieldName = fieldName.Trim().Replace(" ", "").Replace("\t", "");
+                    colInfo.Name = fieldName;
+                    var typeStr = typeRow.GetCell(j).StringCellValue;
+                    (colInfo.ValType, colInfo.IsArray) = ParseValueType(typeStr);
+                    sheetInfo.ColumnInfos.Add(colInfo);
+                }
+            }
+        }
+        return sheetList;
+    }
+
+    private IList<ExcelSheetGroup> GetSheetGroupList(string filePath, IList<ExcelSheetInfo> sheetList)
+    {
+        var dictSheetGroup = new Dictionary<string, ExcelSheetGroup>();
+        foreach (var sheetInfo in sheetList)
+        {
+            if (!sheetInfo.Enabled) continue;
+            if (!dictSheetGroup.ContainsKey(sheetInfo.Name))
+            {
+                dictSheetGroup[sheetInfo.Name] = new ExcelSheetGroup {Name = sheetInfo.Name};
+            }
+            var group = dictSheetGroup[sheetInfo.Name];
+            if (group.Sheets.Count == 0)
+            {
+                group.Sheets.Add(sheetInfo);
+                group.MultiParts = !string.IsNullOrEmpty(sheetInfo.SubName);
+                group.ExcelFilePath = filePath;
+            }
+            else
+            {
+                if (!group.MultiParts)
+                {
+                    Debug.LogError($"{Path.GetFileName(filePath)} - {sheetInfo.Name}_{sheetInfo.SubName} [Already exists an Single-part sheet group!]");
+                    continue;
+                }
+                if (!string.IsNullOrEmpty(sheetInfo.SubName))
+                {
+                    group.Sheets.Add(sheetInfo);
+                }
+                else
+                {
+                    Debug.LogError($"{Path.GetFileName(filePath)} - {sheetInfo.Name} [Already exists an Multi-part sheet group!]");
+                    continue;
+                }
+            }
+        }
+        return new List<ExcelSheetGroup>(dictSheetGroup.Values);
     }
 
 //    private void ExportEntity()
@@ -414,15 +461,54 @@ public class ExcelImporterGenerator : EditorWindow
 //            importerTemplate);
 //    }
 
+    private class ExcelSheetGroup
+    {
+        public string Name;
+        public bool MultiParts;
+        public readonly List<ExcelSheetInfo> Sheets = new List<ExcelSheetInfo>();
+        public string ExcelFilePath;
+
+        public bool Valid
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Name)) return false;
+                if (Sheets.Count == 0) return false;
+                var sheet0 = Sheets[0];
+                if (!MultiParts)
+                {
+                    return Sheets.Count == 1
+                           && Name == sheet0.Name
+                           && string.IsNullOrEmpty(sheet0.SubName)
+                           && sheet0.Enabled;
+                }
+                foreach (var sheet in Sheets)
+                {
+                    var valid = sheet.Name == Name
+                                && !string.IsNullOrEmpty(sheet.SubName)
+                                && sheet.Enabled;
+                    if (!valid) return false;
+                    if (sheet.ColumnInfos.Count != sheet0.ColumnInfos.Count) return false;
+                    for (var i = 0; i < sheet.ColumnInfos.Count; ++i)
+                    {
+                        var colInfo = sheet.ColumnInfos[i];
+                        if (!colInfo.Equals(sheet0.ColumnInfos[i])) return false;
+                    }
+                }
+                return true;
+            }
+        }
+    }
+
     private class ExcelSheetInfo
     {
         public string Name;
         public string SubName;
-        public List<ExcelColumnInfo> ColumnInfos = new List<ExcelColumnInfo>();
+        public readonly List<ExcelColumnInfo> ColumnInfos = new List<ExcelColumnInfo>();
 
         public bool Enabled => NameValid && SubNameValid && !Name.StartsWith("_");
-        public bool NameValid => Regex.IsMatch(Name, @"^_{0,1}[A-Z][a-z]+?$");
-        public bool SubNameValid => string.IsNullOrEmpty(SubName) || Regex.IsMatch(SubName, @"^[A-Z][a-z]+?$");
+        public bool NameValid => Regex.IsMatch(Name, @"^_{0,1}([A-Z][a-z]+?)+?$");
+        public bool SubNameValid => string.IsNullOrEmpty(SubName) || Regex.IsMatch(SubName, @"^([A-Z][a-z]+?)+?[0-9]{0,3}$");
     }
 
     private class ExcelColumnInfo
@@ -432,6 +518,29 @@ public class ExcelImporterGenerator : EditorWindow
         public bool IsArray;
 
         public bool Enabled => Valid && !Name.StartsWith("*");
-        public bool Valid => ValType != ValueType.UNKNOWN && Regex.IsMatch(Name, @"^[A-Za-z]+?$");
+        public bool Valid => ValType != ValueType.UNKNOWN && Regex.IsMatch(Name, @"^([A-Z][a-z]+?)+?[0-9]{0,1}$");
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is ExcelColumnInfo colInfo)) return false;
+            return Name == colInfo.Name && ValType == colInfo.ValType && IsArray == colInfo.IsArray;
+        }
+    }
+
+    private static (ValueType, bool) ParseValueType(string typeStr)
+    {
+        var isArray = false;
+        if (typeStr.EndsWith("[]"))
+        {
+            isArray = true;
+            typeStr = typeStr.Substring(0, typeStr.Length - 2);
+        }
+
+        if (!Enum.TryParse(typeStr, out ValueType valType))
+        {
+            valType = ValueType.UNKNOWN;
+        }
+
+        return (valType, isArray);
     }
 }
