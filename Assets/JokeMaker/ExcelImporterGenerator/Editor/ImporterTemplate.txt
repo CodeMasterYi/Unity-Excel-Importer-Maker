@@ -4,6 +4,7 @@ using UnityEngine;
 using NPOI.HSSF.UserModel;
 using NPOI.XSSF.UserModel;
 using NPOI.SS.UserModel;
+using JokeMaker.Editor;
 using $EntityNamespace$;
 
 namespace $Namespace$
@@ -31,6 +32,7 @@ namespace $Namespace$
                         book = new XSSFWorkbook(stream);
                     }$ExportFunctionCalls$
                 }
+                AssetDatabase.SaveAssets();
             }
         }$ExportFunctions$
     }
@@ -42,8 +44,11 @@ private static void ExportEntity$MainSheetName$(IWorkbook book)
     var sheetName = "$MainSheetName$";
     var fileName = Path.GetFileNameWithoutExtension(filePath);
     var exportPath = $"{exportFolder}/{fileName}_{sheetName}.asset";
+    var dir = Path.GetDirectoryName(exportPath);
+    Debug.Assert(dir != null);
+    Directory.CreateDirectory(dir);
 
-    var dataAsset = (Entity$MainSheetName$)AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
+    var dataAsset = AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
     if (dataAsset == null)
     {
         dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();
@@ -77,8 +82,11 @@ private static void ExportEntity$MainSheetName$(IWorkbook book, string subSheetN
     var sheetName = $"$MainSheetName$_{subSheetName}";
     var fileName = Path.GetFileNameWithoutExtension(filePath);
     var exportPath = $"{exportFolder}/{fileName}_{sheetName}.asset";
+    var dir = Path.GetDirectoryName(exportPath);
+    Debug.Assert(dir != null);
+    Directory.CreateDirectory(dir);
 
-    var dataAsset = (Entity$MainSheetName$)AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
+    var dataAsset = AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
     if (dataAsset == null)
     {
         dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();

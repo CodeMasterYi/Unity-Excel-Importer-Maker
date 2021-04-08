@@ -225,12 +225,13 @@ namespace JokeMaker.Editor
                     var typeRow = sheet.GetRow(1); // 2nd row [TypeSymbol]
                     for (var j = 0; j < titleRow.LastCellNum; j++)
                     {
-                        var colInfo = new ExcelColumnInfo {Index = j + 1};
+                        var colInfo = new ExcelColumnInfo {Index = j};
+
                         var fieldName = titleRow.GetCell(j).StringCellValue;
                         fieldName = fieldName.Trim().Replace(" ", "").Replace("\t", "");
                         colInfo.Name = fieldName;
                         var typeStr = typeRow.GetCell(j).StringCellValue;
-                        (colInfo.ValType, colInfo.IsArray) = ParseValueType(typeStr);
+                        (colInfo.ValType, colInfo.IsArray, colInfo.ArraySep) = ParseValueType(typeStr);
                         sheetInfo.ColumnInfos.Add(colInfo);
                     }
                 }
@@ -307,7 +308,7 @@ namespace JokeMaker.Editor
             content = content.Replace("$Namespace$", entityNamespace);
 
             Directory.CreateDirectory(defaultClassFolder);
-            File.WriteAllText($"{defaultClassFolder}/Entity_{group.Name}.cs", content);
+            File.WriteAllText($"{defaultClassFolder}/Entity{group.Name}.cs", content);
         }
 
         private const string importerTemplateFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/ImporterTemplate.txt";
@@ -349,33 +350,52 @@ namespace JokeMaker.Editor
                 foreach (var columnInfo in sheetGroup.Sheets[0].ColumnInfos)
                 {
                     if (!columnInfo.Enabled) continue;
+                    var i = columnInfo.Index;
+                    var sep = columnInfo.ArraySep;
+                    var n = columnInfo.Name;
                     switch (columnInfo.ValType)
                     {
                         case ValueType.STRING:
+                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
                             exportFieldsBuilder.AppendLine(
-                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? string.Empty : cell.StringCellValue);");
+                                columnInfo.IsArray
+                                    ? $"p.{n} = cell.ToStringArray('{sep}', out var val{i}) ? val{i} : default;"
+                                    : $"p.{n} = cell.ToString(out var val{i}) ? val{i} : default;");
                             break;
                         case ValueType.BOOL:
+                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
                             exportFieldsBuilder.AppendLine(
-                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? false : cell.BooleanCellValue);");
+                                columnInfo.IsArray
+                                    ? $"p.{n} = cell.ToBoolArray('{sep}', out var val{i}) ? val{i} : default;"
+                                    : $"p.{n} = cell.ToBool(out var val{i}) ? val{i} : false;");
                             break;
                         case ValueType.INT:
+                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
                             exportFieldsBuilder.AppendLine(
-                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0 : (int) cell.NumericCellValue);");
+                                columnInfo.IsArray
+                                    ? $"p.{n} = cell.ToIntArray('{sep}', out var val{i}) ? val{i} : default;"
+                                    : $"p.{n} = cell.ToInt(out var val{i}) ? val{i} : default;");
                             break;
                         case ValueType.LONG:
+                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
                             exportFieldsBuilder.AppendLine(
-                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0L : (long) cell.NumericCellValue);");
+                                columnInfo.IsArray
+                                    ? $"p.{n} = cell.ToLongArray('{sep}', out var val{i}) ? val{i} : default;"
+                                    : $"p.{n} = cell.ToLong(out var val{i}) ? val{i} : default;");
                             break;
                         case ValueType.FLOAT:
+                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
                             exportFieldsBuilder.AppendLine(
-                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0f : (float) cell.NumericCellValue);");
+                                columnInfo.IsArray
+                                    ? $"p.{n} = cell.ToFloatArray('{sep}', out var val{i}) ? val{i} : default;"
+                                    : $"p.{n} = cell.ToFloat(out var val{i}) ? val{i} : default;");
                             break;
                         case ValueType.DOUBLE:
+                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
                             exportFieldsBuilder.AppendLine(
-                                $"cell = row.GetCell({columnInfo.Index}); p.{columnInfo.Name} = (cell == null ? 0.0 : cell.NumericCellValue);");
-                            break;
-                        case ValueType.UNKNOWN:
+                                columnInfo.IsArray
+                                    ? $"p.{n} = cell.ToDoubleArray('{sep}', out var val{i}) ? val{i} : default;"
+                                    : $"p.{n} = cell.ToDouble(out var val{i}) ? val{i} : default;");
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -462,6 +482,7 @@ namespace JokeMaker.Editor
             public ValueType ValType;
             public bool IsArray;
             public int Index;
+            public char ArraySep;
 
             public bool Enabled => Valid && !Name.StartsWith("*");
             public bool Valid => ValType != ValueType.UNKNOWN && Regex.IsMatch(Name, @"^([A-Z][a-z]*?)+?[0-9]{0,1}$");
@@ -473,13 +494,16 @@ namespace JokeMaker.Editor
             }
         }
 
-        private static (ValueType, bool) ParseValueType(string typeStr)
+        private static (ValueType, bool, char) ParseValueType(string typeStr)
         {
             var isArray = false;
-            if (typeStr.EndsWith("[]"))
+            var arrSep = '#';
+            if (typeStr.Contains("[]"))
             {
+                var parts = typeStr.Split(new[] {"[]"}, StringSplitOptions.RemoveEmptyEntries);
+                typeStr = parts[0];
                 isArray = true;
-                typeStr = typeStr.Substring(0, typeStr.Length - 2);
+                if (parts.Length > 1) arrSep = parts[1][0];
             }
 
             if (!Enum.TryParse(typeStr, out ValueType valType))
@@ -487,7 +511,7 @@ namespace JokeMaker.Editor
                 valType = ValueType.UNKNOWN;
             }
 
-            return (valType, isArray);
+            return (valType, isArray, arrSep);
         }
     }
 }
