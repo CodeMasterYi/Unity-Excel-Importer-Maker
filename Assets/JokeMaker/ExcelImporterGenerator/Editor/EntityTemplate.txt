@@ -1,22 +1,18 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class $ExcelData$ : ScriptableObject
+namespace $Namespace$
 {
-    public List<Sheet> sheets = new List<Sheet>();
-
-    [Serializable]
-    public class Sheet
+    public class $ExcelData$ : ScriptableObject
     {
-        public string name = string.Empty;
-        public List<Param> list = new List<Param>();
-    }
+        public string ExcelName;
+        public string SheetName;
+        public List<Data> param = new List<Data>();
 
-    [Serializable]
-    public class Param
-    {
-        $Fields$
+        [Serializable]
+        public class Data
+        {$Fields$
+        }
     }
 }

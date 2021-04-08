@@ -169,6 +169,14 @@ namespace JokeMaker.Editor
                 EditorGUILayout.EndVertical();
             }
 
+            if (GUILayout.Button("Generate"))
+            {
+                foreach (var sheetGroup in groupList)
+                {
+                    ExportEntity(sheetGroup);
+                }
+            }
+
 //        GUILayout.Label("Making Importer", EditorStyles.boldLabel);
 //        className = EditorGUILayout.TextField("Class Name", className);
 //
@@ -236,16 +244,6 @@ namespace JokeMaker.Editor
         {
             var window = GetWindow<ExcelImporterGenerator>();
             window.Show();
-        }
-
-        [MenuItem("Assets/XLS Import Settings...")]
-        private static void ExportExcelToAsset()
-        {
-            var sheetList = new List<ExcelSheetInfo>();
-            foreach (var obj in Selection.objects)
-            {
-
-            }
         }
 
         private IList<ExcelSheetInfo> GetSheetInfoList(string filePath)
@@ -333,221 +331,202 @@ namespace JokeMaker.Editor
             return new List<ExcelSheetGroup>(dictSheetGroup.Values);
         }
 
-//    private void ExportEntity()
-//    {
-//        var templateFilePath = (separateSheet)
-//            ? "Assets/JokeMaker/ExcelImporterGenerator/Editor/EntityTemplate2.txt"
-//            : "Assets/JokeMaker/ExcelImporterGenerator/Editor/EntityTemplate.txt";
-//        var entityTemplate = File.ReadAllText(templateFilePath);
-//        entityTemplate = entityTemplate.Replace("\r\n", "\n");
-//        if (!entityTemplate.EndsWith("\n")) entityTemplate += '\n';
-//        var builder = new StringBuilder();
-//        bool isInbetweenArray = false;
-//        foreach (var row in typeList)
-//        {
-//            if (row.Enabled)
-//            {
-//                if (!row.IsArray)
-//                {
-//                    builder.AppendLine();
-//                    builder.AppendFormat("		public {0} {1};", row.ValType.ToString().ToLower(), row.Name);
-//                }
-//                else
-//                {
-//                    if (!isInbetweenArray)
-//                    {
-//                        builder.AppendLine();
-//                        builder.AppendFormat("        public {0}[] {1};", row.ValType.ToString().ToLower(), row.Name);
-//                    }
-//
-//                    isInbetweenArray = (row.NextArrayItem != null);
-//                }
-//            }
-//        }
-//
-//        entityTemplate = entityTemplate.Replace("$Types$", builder.ToString());
-//        entityTemplate = entityTemplate.Replace("$ExcelData$", className);
-//
-//        Directory.CreateDirectory("Assets/JokeMaker/ExcelImporterGenerator/Classes/");
-//        File.WriteAllText("Assets/JokeMaker/ExcelImporterGenerator/Classes/" + className + ".cs", entityTemplate);
-//    }
-//
-//    void ExportImporter()
-//    {
-//        string templateFilePath = (separateSheet)
-//            ? "Assets/JokeMaker/ExcelImporterGenerator/Editor/ExportTemplate2.txt"
-//            : "Assets/JokeMaker/ExcelImporterGenerator/Editor/ExportTemplate.txt";
-//
-//        string importerTemplate = File.ReadAllText(templateFilePath);
-//
-//        StringBuilder builder = new StringBuilder();
-//        StringBuilder sheetListbuilder = new StringBuilder();
-//        int rowCount = 0;
-//        string indent = "                    ";
-//        bool isInbetweenArray = false;
-//
-//        //public string[] sheetNames = {"hoge", "fuga"};
-//        //$SheetList$
-//        foreach (ExcelSheetInfo sht in sheetList)
-//        {
-//            if (sht.Enabled)
-//            {
-//                sheetListbuilder.Append("\"" + sht.Name + "\",");
-//            }
-//
-//            /*
-//            if (sht != sheetList [sheetList.Count - 1])
-//            {
-//                sheetListbuilder.Append(",");
-//            }
-//            */
-//        }
-//
-//        foreach (ExcelColumnInfo row in typeList)
-//        {
-//            if (row.Enabled)
-//            {
-//                if (!row.IsArray)
-//                {
-//                    builder.AppendLine();
-//                    switch (row.ValType)
-//                    {
-//                        case ValueType.STRING:
-//                            builder.AppendFormat(
-//                                indent +
-//                                "cell = row.GetCell({1}); p.{0} = (cell == null ? string.Empty : cell.StringCellValue);",
-//                                row.Name, rowCount);
-//                            break;
-//                        case ValueType.BOOL:
-//                            builder.AppendFormat(
-//                                indent +
-//                                "cell = row.GetCell({1}); p.{0} = (cell == null ? false : cell.BooleanCellValue);",
-//                                row.Name, rowCount);
-//                            break;
-//                        case ValueType.INT:
-//                            builder.AppendFormat(
-//                                indent +
-//                                "cell = row.GetCell({1}); p.{0} = (cell == null ? 0 : (int) cell.NumericCellValue);",
-//                                row.Name, rowCount);
-//                            break;
-//                        case ValueType.LONG:
-//                            builder.AppendFormat(
-//                                indent +
-//                                "cell = row.GetCell({1}); p.{0} = (cell == null ? 0L : (long) cell.NumericCellValue);",
-//                                row.Name, rowCount);
-//                            break;
-//                        case ValueType.FLOAT:
-//                            builder.AppendFormat(
-//                                indent +
-//                                "cell = row.GetCell({1}); p.{0} = (cell == null ? 0f : (float) cell.NumericCellValue);",
-//                                row.Name, rowCount);
-//                            break;
-//                        case ValueType.DOUBLE:
-//                            builder.AppendFormat(
-//                                indent +
-//                                "cell = row.GetCell({1}); p.{0} = (cell == null ? 0.0 : cell.NumericCellValue);",
-//                                row.Name, rowCount);
-//                            break;
-//                    }
-//                }
-//                else
-//                {
-//                    // only the head of array should generate code
-//
-//                    if (!isInbetweenArray)
-//                    {
-//                        int arrayLength = 0;
-//                        for (ExcelColumnInfo r = row; r != null; r = r.NextArrayItem, ++arrayLength)
-//                        {
-//                        }
-//
-//                        builder.AppendLine();
-//                        switch (row.ValType)
-//                        {
-//                            case ValueType.STRING:
-//                                builder.AppendFormat(indent + "p.{0} = new string[{1}];", row.Name, arrayLength);
-//                                break;
-//                            case ValueType.BOOL:
-//                                builder.AppendFormat(indent + "p.{0} = new bool[{1}];", row.Name, arrayLength);
-//                                break;
-//                            case ValueType.INT:
-//                                builder.AppendFormat(indent + "p.{0} = new int[{1}];", row.Name, arrayLength);
-//                                break;
-//                            case ValueType.LONG:
-//                                builder.AppendFormat(indent + "p.{0} = new long[{1}];", row.Name, arrayLength);
-//                                break;
-//                            case ValueType.FLOAT:
-//                                builder.AppendFormat(indent + "p.{0} = new float[{1}];", row.Name, arrayLength);
-//                                break;
-//                            case ValueType.DOUBLE:
-//                                builder.AppendFormat(indent + "p.{0} = new double[{1}];", row.Name, arrayLength);
-//                                break;
-//                        }
-//
-//                        for (var i = 0; i < arrayLength; ++i)
-//                        {
-//                            builder.AppendLine();
-//                            switch (row.ValType)
-//                            {
-//                                case ValueType.STRING:
-//                                    builder.AppendFormat(
-//                                        indent +
-//                                        "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? string.Empty : cell.StringCellValue);",
-//                                        row.Name, rowCount + i, i);
-//                                    break;
-//                                case ValueType.BOOL:
-//                                    builder.AppendFormat(
-//                                        indent +
-//                                        "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? false : cell.BooleanCellValue);",
-//                                        row.Name, rowCount + i, i);
-//                                    break;
-//                                case ValueType.INT:
-//                                    builder.AppendFormat(
-//                                        indent +
-//                                        "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0 : (int) cell.NumericCellValue);",
-//                                        row.Name, rowCount + i, i);
-//                                    break;
-//                                case ValueType.LONG:
-//                                    builder.AppendFormat(
-//                                        indent +
-//                                        "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0L : (long) cell.NumericCellValue);",
-//                                        row.Name, rowCount + i, i);
-//                                    break;
-//                                case ValueType.FLOAT:
-//                                    builder.AppendFormat(
-//                                        indent +
-//                                        "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0f : (float) cell.NumericCellValue);",
-//                                        row.Name, rowCount + i, i);
-//                                    break;
-//                                case ValueType.DOUBLE:
-//                                    builder.AppendFormat(
-//                                        indent +
-//                                        "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0.0 : cell.NumericCellValue);",
-//                                        row.Name, rowCount + i, i);
-//                                    break;
-//                            }
-//                        }
-//                    }
-//
-//                    isInbetweenArray = (row.NextArrayItem != null);
-//                }
-//            }
-//
-//            rowCount += 1;
-//        }
-//
-//        importerTemplate = importerTemplate.Replace("$IMPORT_PATH$", filePath);
-//        importerTemplate = importerTemplate.Replace("$ExportAssetDirectry$", Path.GetDirectoryName(filePath));
-//        importerTemplate = importerTemplate.Replace("$EXPORT_PATH$", Path.ChangeExtension(filePath, ".asset"));
-//        importerTemplate = importerTemplate.Replace("$ExcelData$", className);
-//        importerTemplate = importerTemplate.Replace("$SheetList$", sheetListbuilder.ToString());
-//        importerTemplate = importerTemplate.Replace("$EXPORT_DATA$", builder.ToString());
-//        importerTemplate = importerTemplate.Replace("$ExportTemplate$", fileName + "_importer");
-//
-//        Directory.CreateDirectory("Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor/");
-//        File.WriteAllText("Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor/" + fileName + "_importer.cs",
-//            importerTemplate);
-//    }
+        private const string entityTemplateFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/EntityTemplate.txt";
+        private void ExportEntity(ExcelSheetGroup group)
+        {
+            var entityTemplate = File.ReadAllText(entityTemplateFile);
+            entityTemplate = entityTemplate.Replace("\r\n", "\n");
+            entityTemplate = entityTemplate.TrimEnd('\n') + '\n';
+            var fieldBuilder = new StringBuilder();
+            fieldBuilder.AppendLine();
+            var sheet = group.Sheets[0];
+            foreach (var colInfo in sheet.ColumnInfos)
+            {
+                if (!colInfo.Enabled) continue;
+                var typeStr = colInfo.ValType.ToString().ToLowerInvariant();
+                var fieldName = colInfo.Name;
+                fieldBuilder.AppendLine(colInfo.IsArray
+                    ? $"            public {typeStr}[] {fieldName};"
+                    : $"            public {typeStr} {fieldName};");
+            }
+
+            var fieldsStr = fieldBuilder.ToString().Replace("\r\n", "\n").TrimEnd('\n');
+            entityTemplate = entityTemplate.Replace("$Fields$", fieldsStr);
+            entityTemplate = entityTemplate.Replace("$ExcelData$", $"Entity_{group.Name}");
+            entityTemplate = entityTemplate.Replace("$Namespace$", entityNamespace);
+
+            Directory.CreateDirectory(defaultClassFolder);
+            File.WriteAllText($"{defaultClassFolder}/Entity_{group.Name}.cs", entityTemplate);
+        }
+/*
+        void ExportImporter()
+        {
+            string templateFilePath = (separateSheet)
+                ? "Assets/JokeMaker/ExcelImporterGenerator/Editor/ExportTemplate2.txt"
+                : "Assets/JokeMaker/ExcelImporterGenerator/Editor/ExportTemplate.txt";
+
+            string importerTemplate = File.ReadAllText(templateFilePath);
+
+            StringBuilder builder = new StringBuilder();
+            StringBuilder sheetListbuilder = new StringBuilder();
+            int rowCount = 0;
+            string indent = "                    ";
+            bool isInbetweenArray = false;
+
+            foreach (ExcelSheetInfo sht in sheetList)
+            {
+                if (sht.Enabled)
+                {
+                    sheetListbuilder.Append("\"" + sht.Name + "\",");
+                }
+            }
+
+            foreach (ExcelColumnInfo row in typeList)
+            {
+                if (row.Enabled)
+                {
+                    if (!row.IsArray)
+                    {
+                        builder.AppendLine();
+                        switch (row.ValType)
+                        {
+                            case ValueType.STRING:
+                                builder.AppendFormat(
+                                    indent +
+                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? string.Empty : cell.StringCellValue);",
+                                    row.Name, rowCount);
+                                break;
+                            case ValueType.BOOL:
+                                builder.AppendFormat(
+                                    indent +
+                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? false : cell.BooleanCellValue);",
+                                    row.Name, rowCount);
+                                break;
+                            case ValueType.INT:
+                                builder.AppendFormat(
+                                    indent +
+                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0 : (int) cell.NumericCellValue);",
+                                    row.Name, rowCount);
+                                break;
+                            case ValueType.LONG:
+                                builder.AppendFormat(
+                                    indent +
+                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0L : (long) cell.NumericCellValue);",
+                                    row.Name, rowCount);
+                                break;
+                            case ValueType.FLOAT:
+                                builder.AppendFormat(
+                                    indent +
+                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0f : (float) cell.NumericCellValue);",
+                                    row.Name, rowCount);
+                                break;
+                            case ValueType.DOUBLE:
+                                builder.AppendFormat(
+                                    indent +
+                                    "cell = row.GetCell({1}); p.{0} = (cell == null ? 0.0 : cell.NumericCellValue);",
+                                    row.Name, rowCount);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // only the head of array should generate code
+
+                        if (!isInbetweenArray)
+                        {
+                            int arrayLength = 0;
+                            for (ExcelColumnInfo r = row; r != null; r = r.NextArrayItem, ++arrayLength)
+                            {
+                            }
+
+                            builder.AppendLine();
+                            switch (row.ValType)
+                            {
+                                case ValueType.STRING:
+                                    builder.AppendFormat(indent + "p.{0} = new string[{1}];", row.Name, arrayLength);
+                                    break;
+                                case ValueType.BOOL:
+                                    builder.AppendFormat(indent + "p.{0} = new bool[{1}];", row.Name, arrayLength);
+                                    break;
+                                case ValueType.INT:
+                                    builder.AppendFormat(indent + "p.{0} = new int[{1}];", row.Name, arrayLength);
+                                    break;
+                                case ValueType.LONG:
+                                    builder.AppendFormat(indent + "p.{0} = new long[{1}];", row.Name, arrayLength);
+                                    break;
+                                case ValueType.FLOAT:
+                                    builder.AppendFormat(indent + "p.{0} = new float[{1}];", row.Name, arrayLength);
+                                    break;
+                                case ValueType.DOUBLE:
+                                    builder.AppendFormat(indent + "p.{0} = new double[{1}];", row.Name, arrayLength);
+                                    break;
+                            }
+
+                            for (var i = 0; i < arrayLength; ++i)
+                            {
+                                builder.AppendLine();
+                                switch (row.ValType)
+                                {
+                                    case ValueType.STRING:
+                                        builder.AppendFormat(
+                                            indent +
+                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? string.Empty : cell.StringCellValue);",
+                                            row.Name, rowCount + i, i);
+                                        break;
+                                    case ValueType.BOOL:
+                                        builder.AppendFormat(
+                                            indent +
+                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? false : cell.BooleanCellValue);",
+                                            row.Name, rowCount + i, i);
+                                        break;
+                                    case ValueType.INT:
+                                        builder.AppendFormat(
+                                            indent +
+                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0 : (int) cell.NumericCellValue);",
+                                            row.Name, rowCount + i, i);
+                                        break;
+                                    case ValueType.LONG:
+                                        builder.AppendFormat(
+                                            indent +
+                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0L : (long) cell.NumericCellValue);",
+                                            row.Name, rowCount + i, i);
+                                        break;
+                                    case ValueType.FLOAT:
+                                        builder.AppendFormat(
+                                            indent +
+                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0f : (float) cell.NumericCellValue);",
+                                            row.Name, rowCount + i, i);
+                                        break;
+                                    case ValueType.DOUBLE:
+                                        builder.AppendFormat(
+                                            indent +
+                                            "cell = row.GetCell({1}); p.{0}[{2}] = (cell == null ? 0.0 : cell.NumericCellValue);",
+                                            row.Name, rowCount + i, i);
+                                        break;
+                                }
+                            }
+                        }
+
+                        isInbetweenArray = (row.NextArrayItem != null);
+                    }
+                }
+
+                rowCount += 1;
+            }
+
+            importerTemplate = importerTemplate.Replace("$IMPORT_PATH$", filePath);
+            importerTemplate = importerTemplate.Replace("$ExportAssetDirectry$", Path.GetDirectoryName(filePath));
+            importerTemplate = importerTemplate.Replace("$EXPORT_PATH$", Path.ChangeExtension(filePath, ".asset"));
+            importerTemplate = importerTemplate.Replace("$ExcelData$", className);
+            importerTemplate = importerTemplate.Replace("$SheetList$", sheetListbuilder.ToString());
+            importerTemplate = importerTemplate.Replace("$EXPORT_DATA$", builder.ToString());
+            importerTemplate = importerTemplate.Replace("$ExportTemplate$", fileName + "_importer");
+
+            Directory.CreateDirectory("Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor/");
+            File.WriteAllText("Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor/" + fileName + "_importer.cs",
+                importerTemplate);
+        }
+        */
 
         private class ExcelSheetGroup
         {

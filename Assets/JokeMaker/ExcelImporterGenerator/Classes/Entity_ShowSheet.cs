@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace JokeMaker.Entity
 {
-    public class Entity_Item : ScriptableObject
+    public class Entity_ShowSheet : ScriptableObject
     {
         public string ExcelName;
         public string SheetName;
@@ -15,11 +15,8 @@ namespace JokeMaker.Entity
         {
             public int ID;
             public string Desc;
-            public int Num;
-            public double Price;
-            public bool Enabled;
-            public float Total;
-            public long[] Arr;
+            public double[] Num;
+            public string[] XXX;
         }
     }
 }
