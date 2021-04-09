@@ -54,6 +54,7 @@ private static void ExportEntity$MainSheetName$(IWorkbook book)
         dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();
         dataAsset.hideFlags = HideFlags.NotEditable;
         AssetDatabase.CreateAsset(dataAsset, exportPath);
+        dataAsset = AssetDatabase.LoadAssetAtPath<EntityShowSheet>(exportPath);
     }
     dataAsset.DataList.Clear();
 
@@ -92,6 +93,7 @@ private static void ExportEntity$MainSheetName$(IWorkbook book, string subSheetN
         dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();
         dataAsset.hideFlags = HideFlags.NotEditable;
         AssetDatabase.CreateAsset(dataAsset, exportPath);
+        dataAsset = AssetDatabase.LoadAssetAtPath<EntityShowSheet>(exportPath);
     }
     dataAsset.DataList.Clear();
 

@@ -20,15 +20,124 @@ namespace JokeMaker.Editor
         private readonly List<Object> excels = new List<Object>();
         private readonly List<string> excelFileExtensions = new List<string> {".xls", ".xlsx", ".xlsm"};
         private int excelIndex = -1;
-        private string entityNamespace = "JokeMaker.Entity";
-        private string importerNamespace = "JokeMaker.Importer";
-        private string defaultAssetOutputFolder = "Assets/JokeMaker/ExcelImporterGenerator/Output";
-        private string defaultClassFolder = "Assets/JokeMaker/ExcelImporterGenerator/Classes";
-        private string defaultImporterFolder = "Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor";
+        private const string entityNamespace = "JokeMaker.Entity";
+        private const string importerNamespace = "JokeMaker.Importer";
+        private const string defaultAssetOutputFolder = "Assets/JokeMaker/ExcelImporterGenerator/Output";
+        private const string defaultClassesFolder = "Assets/JokeMaker/ExcelImporterGenerator/Classes";
+        private const string defaultImporterFolder = "Assets/JokeMaker/ExcelImporterGenerator/Classes/Editor";
+        private const string settingsFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/GeneratorSettings.asset";
+
+        private GeneratorSettings settings;
+        private GeneratorSettings Settings
+        {
+            get
+            {
+                if (settings != null) return settings;
+                settings = AssetDatabase.LoadAssetAtPath<GeneratorSettings>(settingsFile);
+                if (settings != null) return settings;
+                settings = CreateInstance<GeneratorSettings>();
+                settings.EntityNamespace = entityNamespace;
+                settings.ImporterNamespace = importerNamespace;
+                settings.AssetOutputFolder = defaultAssetOutputFolder;
+                settings.EntitiesFolder = defaultClassesFolder;
+                settings.ImportersFolder = $"{defaultClassesFolder}/Editor";
+                settings.ExcelFiles = new List<string>();
+                settings.hideFlags = HideFlags.NotEditable;
+                AssetDatabase.CreateAsset(settings, settingsFile);
+                settings = AssetDatabase.LoadAssetAtPath<GeneratorSettings>(settingsFile);
+                return settings;
+            }
+        }
 
         private void OnGUI()
         {
+            // Generator Settings
+            EditorGUILayout.LabelField("Generator Settings");
+            EditorGUILayout.BeginVertical("box");
+            Settings.EntityNamespace = EditorGUILayout.TextField($"{nameof(Settings.EntityNamespace)}", Settings.EntityNamespace);
+            Settings.ImporterNamespace = EditorGUILayout.TextField($"{nameof(Settings.ImporterNamespace)}", Settings.ImporterNamespace);
+            var dataPath = Application.dataPath.Replace('\\', '/').TrimEnd('/');
+            //- AssetOutputFolder
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.TextField($"{nameof(Settings.AssetOutputFolder)}", Settings.AssetOutputFolder);
+            EditorGUI.EndDisabledGroup();
+            if (GUILayout.Button("...", GUILayout.Width(25)))
+            {
+                var path = Path.Combine(dataPath, Settings.AssetOutputFolder.Substring(7));
+                path = EditorUtility.OpenFolderPanel("Asset Output Folder", path, null);
+                if (path != null)
+                {
+                    path = path.Replace('\\', '/');
+                    if (path.StartsWith(dataPath))
+                    {
+                        Settings.AssetOutputFolder = "Assets/" + path.Substring(dataPath.Length + 1);
+                    }
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+            //- EntitiesFolder
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.TextField($"{nameof(Settings.EntitiesFolder)}", Settings.EntitiesFolder);
+            EditorGUI.EndDisabledGroup();
+            if (GUILayout.Button("...", GUILayout.Width(25)))
+            {
+                var path = Path.Combine(dataPath, Settings.EntitiesFolder.Substring(7));
+                path = EditorUtility.OpenFolderPanel("Entities Folder", path, null);
+                if (path != null)
+                {
+                    path = path.Replace('\\', '/');
+                    if (path.StartsWith(dataPath))
+                    {
+                        Settings.AssetOutputFolder = "Assets/" + path.Substring(dataPath.Length + 1);
+                    }
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+            //- ImportersFolder
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.TextField($"{nameof(Settings.ImportersFolder)}", Settings.ImportersFolder);
+            EditorGUI.EndDisabledGroup();
+            if (GUILayout.Button("...", GUILayout.Width(25)))
+            {
+                var path = Path.Combine(dataPath, Settings.ImportersFolder.Substring(7));
+                path = EditorUtility.OpenFolderPanel("Importers Folder", path, null);
+                if (path != null && (path.Contains("/Editor/") || path.EndsWith("/Editor")))
+                {
+                    path = path.Replace('\\', '/');
+                    if (path.StartsWith(dataPath))
+                    {
+                        Settings.AssetOutputFolder = "Assets/" + path.Substring(dataPath.Length + 1);
+                    }
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+            if (GUILayout.Button("Save Settings"))
+            {
+                Settings.ExcelFiles.Clear();
+                foreach (var excelObj in excels)
+                {
+                    if (excelObj == null) continue;
+                    Settings.ExcelFiles.Add(AssetDatabase.GetAssetPath(excelObj));
+                }
+                EditorUtility.SetDirty(Settings);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+            EditorGUILayout.EndVertical();
+
             // Excel List
+            if (excels.Count == 0 && Settings.ExcelFiles.Count > 0)
+            {
+                foreach (var excelFile in Settings.ExcelFiles)
+                {
+                    excels.Add(AssetDatabase.LoadAssetAtPath<Object>(excelFile));
+                }
+            }
+
+            EditorGUILayout.Space();
             EditorGUILayout.LabelField($"Excel List[{excels.Count}]");
             EditorGUILayout.BeginVertical("box");
             if (GUILayout.Button("+"))
@@ -283,7 +392,7 @@ namespace JokeMaker.Editor
             return new List<ExcelSheetGroup>(dictSheetGroup.Values);
         }
 
-        private const string entityTemplateFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/EntityTemplate.txt";
+        private const string entityTemplateFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/Templates/EntityTemplate.txt";
         private void ExportEntity(ExcelSheetGroup group)
         {
             var entityTemplate = File.ReadAllText(entityTemplateFile);
@@ -306,11 +415,11 @@ namespace JokeMaker.Editor
             content = content.Replace("$ExcelData$", $"Entity{group.Name}");
             content = content.Replace("$Namespace$", entityNamespace);
 
-            Directory.CreateDirectory(defaultClassFolder);
-            File.WriteAllText($"{defaultClassFolder}/Entity{group.Name}.cs", content);
+            Directory.CreateDirectory(defaultClassesFolder);
+            File.WriteAllText($"{defaultClassesFolder}/Entity{group.Name}.cs", content);
         }
 
-        private const string importerTemplateFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/ImporterTemplate.txt";
+        private const string importerTemplateFile = "Assets/JokeMaker/ExcelImporterGenerator/Editor/Templates/ImporterTemplate.txt";
         private void ExportImporter(IList<ExcelSheetGroup> groupList)
         {
             var importerTemplate = File.ReadAllText(importerTemplateFile);
