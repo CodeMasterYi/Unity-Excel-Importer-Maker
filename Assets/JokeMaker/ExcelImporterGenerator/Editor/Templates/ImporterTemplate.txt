@@ -13,7 +13,7 @@ namespace $Namespace$
     {
         private const string filePath = "$IMPORT_PATH$";
         private const string exportFolder = "$EXPORT_FOLDER$";
-        
+
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
             foreach (var asset in importedAssets)
@@ -54,7 +54,7 @@ private static void ExportEntity$MainSheetName$(IWorkbook book)
         dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();
         dataAsset.hideFlags = HideFlags.NotEditable;
         AssetDatabase.CreateAsset(dataAsset, exportPath);
-        dataAsset = AssetDatabase.LoadAssetAtPath<EntityShowSheet>(exportPath);
+        dataAsset = AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
     }
     dataAsset.DataList.Clear();
 
@@ -93,7 +93,7 @@ private static void ExportEntity$MainSheetName$(IWorkbook book, string subSheetN
         dataAsset = ScriptableObject.CreateInstance<Entity$MainSheetName$>();
         dataAsset.hideFlags = HideFlags.NotEditable;
         AssetDatabase.CreateAsset(dataAsset, exportPath);
-        dataAsset = AssetDatabase.LoadAssetAtPath<EntityShowSheet>(exportPath);
+        dataAsset = AssetDatabase.LoadAssetAtPath<Entity$MainSheetName$>(exportPath);
     }
     dataAsset.DataList.Clear();
 

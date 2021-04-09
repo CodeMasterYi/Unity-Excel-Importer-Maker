@@ -199,7 +199,7 @@ namespace JokeMaker.Editor
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Sheet Settings");
+            EditorGUILayout.LabelField("Including Sheets");
             EditorGUILayout.BeginVertical("box");
             foreach (var sheet in sheetList)
             {
