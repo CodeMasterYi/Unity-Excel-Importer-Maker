@@ -288,21 +288,20 @@ namespace JokeMaker.Editor
         {
             var entityTemplate = File.ReadAllText(entityTemplateFile);
             var content = entityTemplate.Replace("\r\n", "\n");
-            content = content.TrimEnd('\n') + '\n';
+            content = content.TrimEnd() + '\n';
             var fieldBuilder = new StringBuilder();
-            fieldBuilder.AppendLine();
+            AppendLine(fieldBuilder);
             var sheet = group.Sheets[0];
             foreach (var colInfo in sheet.ColumnInfos)
             {
                 if (!colInfo.Enabled) continue;
                 var typeStr = colInfo.ValType.ToString().ToLowerInvariant();
                 var fieldName = colInfo.Name;
-                fieldBuilder.AppendLine(colInfo.IsArray
-                    ? $"            public {typeStr}[] {fieldName};"
-                    : $"            public {typeStr} {fieldName};");
+                if (colInfo.IsArray) typeStr += "[]";
+                AppendLine(fieldBuilder, $"public {typeStr} {fieldName};", 3);
             }
 
-            var fieldsStr = fieldBuilder.ToString().Replace("\r\n", "\n").TrimEnd('\n');
+            var fieldsStr = fieldBuilder.ToString().Replace("\r\n", "\n").TrimEnd();
             content = content.Replace("$Fields$", fieldsStr);
             content = content.Replace("$ExcelData$", $"Entity{group.Name}");
             content = content.Replace("$Namespace$", entityNamespace);
@@ -320,14 +319,15 @@ namespace JokeMaker.Editor
             var match2 = Regex.Match(importerTemplate, @"##ExportFunction2([\s\S]+?)##", RegexOptions.Multiline);
             importerTemplate = Regex.Replace(importerTemplate, @"##ExportFunction1[\s\S]+?##", "", RegexOptions.Multiline);
             importerTemplate = Regex.Replace(importerTemplate, @"##ExportFunction2[\s\S]+?##", "", RegexOptions.Multiline);
-            importerTemplate = importerTemplate.TrimEnd('\n') + '\n';
+            importerTemplate = importerTemplate.TrimEnd() + '\n';
             var exportFunction1Template = match1.Groups[1].Value;
             var exportFunction2Template = match2.Groups[1].Value;
             
             var exportFunctionsBuilder = new StringBuilder();
-            exportFunctionsBuilder.AppendLine();
+            AppendLine(exportFunctionsBuilder);
             var exportFunctionCallsBuilder = new StringBuilder();
-            exportFunctionCallsBuilder.AppendLine();
+            AppendLine(exportFunctionCallsBuilder);
+            AppendLine(exportFunctionCallsBuilder);
             var exportFieldsBuilder = new StringBuilder();
 
             foreach (var sheetGroup in groupList)
@@ -338,15 +338,15 @@ namespace JokeMaker.Editor
                 {
                     foreach (var sheet in sheetGroup.Sheets)
                     {
-                        exportFunctionCallsBuilder.AppendLine($"{functionName}(book, \"{sheet.SubName}\");");
+                        AppendLine(exportFunctionCallsBuilder, $"{functionName}(book, \"{sheet.SubName}\");", 5);
                     }
                 }
                 else
                 {
-                    exportFunctionCallsBuilder.AppendLine($"{functionName}(book);");
+                    AppendLine(exportFunctionCallsBuilder, $"{functionName}(book);", 5);
                 }
                 exportFieldsBuilder.Clear();
-                exportFieldsBuilder.AppendLine();
+                AppendLine(exportFieldsBuilder);
                 foreach (var columnInfo in sheetGroup.Sheets[0].ColumnInfos)
                 {
                     if (!columnInfo.Enabled) continue;
@@ -356,46 +356,46 @@ namespace JokeMaker.Editor
                     switch (columnInfo.ValType)
                     {
                         case ValueType.STRING:
-                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
-                            exportFieldsBuilder.AppendLine(
+                            AppendLine(exportFieldsBuilder, $"cell = row.GetCell({i});", 2);
+                            AppendLine(exportFieldsBuilder,
                                 columnInfo.IsArray
                                     ? $"p.{n} = cell.ToStringArray('{sep}', out var val{i}) ? val{i} : default;"
-                                    : $"p.{n} = cell.ToString(out var val{i}) ? val{i} : default;");
+                                    : $"p.{n} = cell.ToString(out var val{i}) ? val{i} : default;", 2);
                             break;
                         case ValueType.BOOL:
-                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
-                            exportFieldsBuilder.AppendLine(
+                            AppendLine(exportFieldsBuilder, $"cell = row.GetCell({i});", 2);
+                            AppendLine(exportFieldsBuilder,
                                 columnInfo.IsArray
                                     ? $"p.{n} = cell.ToBoolArray('{sep}', out var val{i}) ? val{i} : default;"
-                                    : $"p.{n} = cell.ToBool(out var val{i}) ? val{i} : false;");
+                                    : $"p.{n} = cell.ToBool(out var val{i}) ? val{i} : default;", 2);
                             break;
                         case ValueType.INT:
-                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
-                            exportFieldsBuilder.AppendLine(
+                            AppendLine(exportFieldsBuilder, $"cell = row.GetCell({i});", 2);
+                            AppendLine(exportFieldsBuilder,
                                 columnInfo.IsArray
                                     ? $"p.{n} = cell.ToIntArray('{sep}', out var val{i}) ? val{i} : default;"
-                                    : $"p.{n} = cell.ToInt(out var val{i}) ? val{i} : default;");
+                                    : $"p.{n} = cell.ToInt(out var val{i}) ? val{i} : default;", 2);
                             break;
                         case ValueType.LONG:
-                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
-                            exportFieldsBuilder.AppendLine(
+                            AppendLine(exportFieldsBuilder, $"cell = row.GetCell({i});", 2);
+                            AppendLine(exportFieldsBuilder,
                                 columnInfo.IsArray
                                     ? $"p.{n} = cell.ToLongArray('{sep}', out var val{i}) ? val{i} : default;"
-                                    : $"p.{n} = cell.ToLong(out var val{i}) ? val{i} : default;");
+                                    : $"p.{n} = cell.ToLong(out var val{i}) ? val{i} : default;", 2);
                             break;
                         case ValueType.FLOAT:
-                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
-                            exportFieldsBuilder.AppendLine(
+                            AppendLine(exportFieldsBuilder, $"cell = row.GetCell({i});", 2);
+                            AppendLine(exportFieldsBuilder,
                                 columnInfo.IsArray
                                     ? $"p.{n} = cell.ToFloatArray('{sep}', out var val{i}) ? val{i} : default;"
-                                    : $"p.{n} = cell.ToFloat(out var val{i}) ? val{i} : default;");
+                                    : $"p.{n} = cell.ToFloat(out var val{i}) ? val{i} : default;", 2);
                             break;
                         case ValueType.DOUBLE:
-                            exportFieldsBuilder.AppendLine($"cell = row.GetCell({i});");
-                            exportFieldsBuilder.AppendLine(
+                            AppendLine(exportFieldsBuilder, $"cell = row.GetCell({i});", 2);
+                            AppendLine(exportFieldsBuilder,
                                 columnInfo.IsArray
                                     ? $"p.{n} = cell.ToDoubleArray('{sep}', out var val{i}) ? val{i} : default;"
-                                    : $"p.{n} = cell.ToDouble(out var val{i}) ? val{i} : default;");
+                                    : $"p.{n} = cell.ToDouble(out var val{i}) ? val{i} : default;", 2);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -404,7 +404,21 @@ namespace JokeMaker.Editor
 
                 functionContent = functionContent.Replace("$MainSheetName$", sheetGroup.Name);
                 functionContent = functionContent.Replace("$EXPORT_DATA$", exportFieldsBuilder.ToString());
-                exportFunctionsBuilder.AppendLine(functionContent);
+                functionContent = functionContent.Replace("\r\n", "\n").TrimEnd();
+                AppendLine(exportFunctionsBuilder, functionContent);
+            }
+
+            var ss = new StringReader(exportFunctionsBuilder.ToString());
+            exportFunctionsBuilder.Clear();
+            string line = null;
+            while ((line = ss.ReadLine()) != null)
+            {
+                line = line.TrimEnd();
+                if (string.IsNullOrEmpty(line)) AppendLine(exportFunctionsBuilder);
+                else
+                {
+                    AppendLine(exportFunctionsBuilder, line, 2);
+                }
             }
 
             var mainContent = importerTemplate;
@@ -415,11 +429,28 @@ namespace JokeMaker.Editor
             mainContent = mainContent.Replace("$ExcelName$", fileName);
             mainContent = mainContent.Replace("$IMPORT_PATH$", filePath);
             mainContent = mainContent.Replace("$EXPORT_FOLDER$", defaultAssetOutputFolder);
-            mainContent = mainContent.Replace("$ExportFunctionCalls$", exportFunctionCallsBuilder.ToString());
-            mainContent = mainContent.Replace("$ExportFunctions$", exportFunctionsBuilder.ToString());
+            mainContent = mainContent.Replace("$ExportFunctionCalls$", exportFunctionCallsBuilder.ToString().TrimEnd());
+            mainContent = mainContent.Replace("$ExportFunctions$", exportFunctionsBuilder.ToString().TrimEnd());
 
             Directory.CreateDirectory(defaultImporterFolder);
             File.WriteAllText($"{defaultImporterFolder}/ExcelImporter_{fileName}.cs", mainContent);
+        }
+
+        private static void AppendLine(StringBuilder sb, string msg = "", uint indentLevel = 0)
+        {
+            if (indentLevel == 0) sb.AppendLine(msg);
+            else
+            {
+                const string indentUnit = "    ";
+                var msgBuilder = new StringBuilder();
+                for (var i = 0; i < indentLevel; ++i)
+                {
+                    msgBuilder.Append(indentUnit);
+                }
+                msgBuilder.Append(msg);
+
+                sb.AppendLine(msgBuilder.ToString());
+            }
         }
 
         private class ExcelSheetGroup

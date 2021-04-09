@@ -16,20 +16,20 @@ namespace $Namespace$
         
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
-            foreach (string asset in importedAssets)
+            foreach (var asset in importedAssets)
             {
                 if (!filePath.Equals(asset)) continue;
 
-                using(FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using(var fs = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
                     IWorkbook book = null;
                     if (Path.GetExtension (filePath) == ".xls")
                     {
-                        book = new HSSFWorkbook(stream);
+                        book = new HSSFWorkbook(fs);
                     }
                     else
                     {
-                        book = new XSSFWorkbook(stream);
+                        book = new XSSFWorkbook(fs);
                     }$ExportFunctionCalls$
                 }
                 AssetDatabase.SaveAssets();
@@ -41,7 +41,7 @@ namespace $Namespace$
 ##ExportFunction1
 private static void ExportEntity$MainSheetName$(IWorkbook book)
 {
-    var sheetName = "$MainSheetName$";
+    const string sheetName = "$MainSheetName$";
     var fileName = Path.GetFileNameWithoutExtension(filePath);
     var exportPath = $"{exportFolder}/{fileName}_{sheetName}.asset";
     var dir = Path.GetDirectoryName(exportPath);
